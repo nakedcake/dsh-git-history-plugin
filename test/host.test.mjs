@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import { spawn as spawnProcess, execFileSync } from 'node:child_process'
 import { apply } from '../index.js'
-import { parseBranchTracking, parseWorktreeStatus } from '../git.js'
+import { parseBranchTracking, parseShortstat, parseWorktreeStatus } from '../git.js'
 
 const REPO = process.env.GH_TEST_REPO ?? process.cwd()
 const HEAD = execFileSync('git', ['-C', REPO, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
@@ -67,6 +67,21 @@ apply(ctx)
 assert.ok(routes.has('/api/git-history.commit'), 'commit route registered')
 assert.ok(routes.has('/api/git-history.commits'), 'commits route registered')
 assert.ok(routes.has('/api/git-history.status'), 'status route registered')
+
+// Per-commit diffstat parsing is checked against synthetic shortstat output.
+const shortstatInput = [
+  '',
+  'abc1234def5678\n\n 3 files changed, 12 insertions(+), 4 deletions(-)',
+  '',
+  'deadbeefdeadbeef\n\n 1 file changed, 2 insertions(+)',
+  '',
+  '0badc0ffee123456\n\n 1 file changed',
+  '',
+].join('\x1e')
+const shortstat = parseShortstat(shortstatInput)
+assert.deepEqual(shortstat.get('abc1234def5678'), { added: 12, removed: 4 })
+assert.deepEqual(shortstat.get('deadbeefdeadbeef'), { added: 2, removed: 0 })
+assert.deepEqual(shortstat.get('0badc0ffee123456'), { added: 0, removed: 0 })
 
 // Porcelain-v1 parsing is checked against a synthetic status, so the assertions do not
 // depend on the checkout being dirty.
@@ -129,6 +144,9 @@ for (const commit of page.body.commits) {
   assert.equal(typeof commit.author, 'string')
   assert.ok(Array.isArray(commit.refs))
   assert.ok(Number.isFinite(Date.parse(commit.authorDate)), `parseable date ${commit.authorDate}`)
+  assert.equal(typeof commit.added, 'number', 'line additions on the list row')
+  assert.equal(typeof commit.removed, 'number', 'line deletions on the list row')
+  assert.ok(commit.added >= 0 && commit.removed >= 0)
 }
 assert.match(page.body.commits[0].hash, new RegExp(`^${HEAD}$`), 'newest commit is HEAD')
 

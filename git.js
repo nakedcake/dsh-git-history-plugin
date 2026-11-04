@@ -169,7 +169,60 @@ export async function listCommits(ctx, repository, page, signal) {
   }
   const commits = parseLog(result.text)
   const hasMore = commits.length > page.limit
-  return { commits: hasMore ? commits.slice(0, page.limit) : commits, hasMore }
+  const pageCommits = hasMore ? commits.slice(0, page.limit) : commits
+  const stats = await readCommitStats(ctx, repository, page, signal)
+  return {
+    commits: pageCommits.map((commit) => {
+      const entry = stats.get(commit.hash)
+      return entry === undefined ? commit : { ...commit, added: entry.added, removed: entry.removed }
+    }),
+    hasMore,
+  }
+}
+
+/**
+ * Read per-commit `+added/−removed` line counts for one page.
+ *
+ * `git log --shortstat` prints one compact summary line per commit, so the whole
+ * page costs one extra Git invocation and no per-commit spawn.
+ * @param {object} ctx - Host context.
+ * @param {{ root: string }} repository - resolved repository.
+ * @param {{ limit: number, skip: number }} page - the same page window as the log.
+ * @param {AbortSignal | undefined} signal - caller cancellation.
+ * @returns {Promise<Map<string, { added: number, removed: number }>>} stats by full commit id.
+ */
+async function readCommitStats(ctx, repository, page, signal) {
+  const result = await spawnGit(
+    ctx,
+    repository.root,
+    ['log', `--max-count=${page.limit + 1}`, `--skip=${page.skip}`, '--shortstat', `--format=${RECORD}%H`],
+    READ_BUDGET.log,
+    signal,
+  )
+  if (result.exitCode !== 0) return new Map()
+  return parseShortstat(result.text)
+}
+
+/**
+ * Parse one page of `git log --shortstat --format=<record>%H` output.
+ * @param {string} text - captured stdout.
+ * @returns {Map<string, { added: number, removed: number }>} line counts by full commit id.
+ */
+export function parseShortstat(text) {
+  const stats = new Map()
+  for (const record of text.split(RECORD)) {
+    const lines = record.split('\n')
+    const hash = lines[0].trim()
+    if (!/^[0-9a-f]{7,40}$/i.test(hash)) continue
+    const summary = lines.find((line) => /changed/.test(line) && /(insertion|deletion)/.test(line))
+    const added = summary === undefined ? undefined : /(\d+) insertion/.exec(summary)
+    const removed = summary === undefined ? undefined : /(\d+) deletion/.exec(summary)
+    stats.set(hash, {
+      added: added === undefined || added === null ? 0 : Number(added[1]),
+      removed: removed === undefined || removed === null ? 0 : Number(removed[1]),
+    })
+  }
+  return stats
 }
 
 /**

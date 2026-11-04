@@ -13,6 +13,12 @@ message, changed files, and diff.
 Both images are illustrative mockups with a fictional repository; the plugin
 reads the real Session workspace.
 
+Colors follow Git's own conventions: added lines and `+N` counts are green,
+removed lines and `−N` counts are red, hunk headers use the accent color the way
+Git's diff uses cyan, the working-tree panel colors staged paths green and
+unstaged/untracked paths red like `git status --color`, conflicts are red and
+bold, and a commit's changed files keep the usual `A`/`M`/`D`/`R` palette.
+
 ## What it adds
 
 - **A tab type** — `git-history` (`@local/dsh-plugin-git-history`), opened from
@@ -29,7 +35,8 @@ reads the real Session workspace.
   clean` when nothing is pending, and re-reads `git status` when the window
   regains focus (the toolbar refresh also reloads it).
 - **A commit list** — newest first, 50 per page with *Load more*, showing the
-  short hash, refs (`HEAD -> main`, tags, remotes), subject, author, and date.
+  short hash, refs (`HEAD -> main`, tags, remotes), subject, author, date, and
+  the commit's `+N −M` line counts (green/red).
 - **A commit view** — full subject and body, author/committer/date, clickable
   parent hashes, and a **changed-files panel**: one selectable row per file with
   its status letter and `+N −M` counts. Selecting a row shows that file's diff

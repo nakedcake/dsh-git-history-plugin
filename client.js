@@ -155,7 +155,11 @@ window.__ModuleLoader__.load({
       '.gh-row-top{display:flex;align-items:center;gap:6px;min-width:0}',
       '.gh-hash{font-family:' + MONO + ';font-size:11px;color:var(--dsw-alias-label-secondary);flex:none}',
       '.gh-ref{max-width:150px;padding:0 5px;border:.5px solid var(--dsw-alias-border-l2);border-radius:999px;font-size:10px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}',
-      '.gh-date{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-secondary);flex:none}',
+      '.gh-row-tail{margin-left:auto;display:inline-flex;align-items:center;gap:10px;flex:none}',
+      '.gh-date{font-size:11px;color:var(--dsw-alias-label-secondary);flex:none}',
+      '.gh-diffstat{display:inline-flex;gap:5px;flex:none;font-family:' + MONO + ';font-size:10.5px;line-height:1}',
+      '.gh-stat-add{color:var(--dsw-alias-state-success-primary)}',
+      '.gh-stat-del{color:var(--dsw-alias-state-error-primary)}',
       '.gh-subject{font-size:13px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}',
       '.gh-author{font-size:11px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.gh-note{display:flex;flex-direction:column;gap:8px;padding:18px 14px;line-height:1.5;color:var(--dsw-alias-label-secondary)}',
@@ -207,7 +211,7 @@ window.__ModuleLoader__.load({
       '.gh-diff-step:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}',
       '.gh-diff-body{margin:0;padding:6px 0;overflow-x:auto;font-family:' + MONO + ';font-size:11.5px;line-height:1.45;tab-size:4}',
       '.gh-line{display:block;white-space:pre;padding:0 14px}',
-      '.gh-line-hunk{color:var(--dsw-alias-label-secondary)}',
+      '.gh-line-hunk{color:var(--dsw-alias-brand-primary)}',
       '.gh-line-added{color:var(--dsw-alias-state-success-primary)}',
       '.gh-line-removed{color:var(--dsw-alias-state-error-primary)}',
       '.gh-line-context{color:var(--dsw-alias-label-primary)}',
@@ -229,6 +233,11 @@ window.__ModuleLoader__.load({
       '.gh-state-count{min-width:16px;padding:0 5px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);font-size:10px;font-weight:500;text-align:center;letter-spacing:0;text-transform:none}',
       '.gh-state-files{display:flex;flex-direction:column;gap:1px}',
       '.gh-state-file{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px}',
+      '.gh-state-file .gh-file-status,.gh-state-file .gh-file-path{color:inherit}',
+      '.gh-tone-staged{color:var(--dsw-alias-state-success-primary)}',
+      '.gh-tone-changes,.gh-tone-untracked,.gh-tone-conflict{color:var(--dsw-alias-state-error-primary)}',
+      '.gh-tone-conflict{font-weight:600}',
+      '.gh-state-sep{color:var(--dsw-alias-label-secondary)}',
       '.gh-state-muted{font-size:11px;color:var(--dsw-alias-label-secondary)}',
       '.gh-state-clean{margin:0;font-size:12px;color:var(--dsw-alias-label-secondary)}',
       '.gh-state-stashes{margin:0;font-size:11px;color:var(--dsw-alias-label-secondary)}',
@@ -382,7 +391,7 @@ window.__ModuleLoader__.load({
       const kind = known ? file.status : 'modified'
       const status = STATUS_LETTERS[kind]
       const path = file.oldPath === undefined ? file.path : `${file.oldPath} → ${file.path}`
-      const counts = file.binary ? t('detail.binary') : `+${file.added} −${file.removed}`
+      const counts = file.binary ? t('detail.binary') : undefined
       return h(
         'button',
         {
@@ -395,7 +404,9 @@ window.__ModuleLoader__.load({
         },
         h('span', { className: `gh-file-status gh-file-status-${kind}`, 'aria-hidden': true }, status),
         h('span', { className: 'gh-file-path' }, path),
-        h('span', { className: 'gh-counts' }, counts),
+        counts === undefined
+          ? h(DiffStat, { added: file.added, removed: file.removed })
+          : h('span', { className: 'gh-counts' }, counts),
       )
     }
 
@@ -480,6 +491,17 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /** Added and removed line counts, colored the way Git's own diff output is. */
+    function DiffStat({ added, removed }) {
+      if (typeof added !== 'number' || typeof removed !== 'number') return null
+      return h(
+        'span',
+        { className: 'gh-diffstat' },
+        h('span', { className: 'gh-stat-add' }, `+${added}`),
+        h('span', { className: 'gh-stat-del' }, `−${removed}`),
+      )
+    }
+
     /** One compact commit row in the history list. */
     function CommitRow({ commit, onOpen }) {
       const date = formatDate(commit.authorDate)
@@ -497,7 +519,12 @@ window.__ModuleLoader__.load({
           { className: 'gh-row-top' },
           h('span', { className: 'gh-hash' }, commit.short),
           commit.refs.slice(0, 3).map((ref) => h('span', { key: ref, className: 'gh-ref', title: ref }, ref)),
-          h('span', { className: 'gh-date', title: commit.authorDate }, date),
+          h(
+            'span',
+            { className: 'gh-row-tail' },
+            h(DiffStat, { added: commit.added, removed: commit.removed }),
+            h('span', { className: 'gh-date', title: commit.authorDate }, date),
+          ),
         ),
         h('span', { className: 'gh-subject' }, commit.subject),
         h('span', { className: 'gh-author' }, commit.author),
@@ -755,8 +782,9 @@ window.__ModuleLoader__.load({
      * One working-tree group. Its header with the count is always rendered so an
      * empty list reads as "0", and rows follow only when the group has entries.
      */
-    function StateGroup({ title, files, fallbackKind }) {
+    function StateGroup({ title, files, tone }) {
       const list = Array.isArray(files) ? files : []
+      const fallback = tone === 'untracked' ? 'untracked' : tone === 'conflict' ? 'conflict' : 'modified'
       return h(
         'div',
         { className: 'gh-state-group', 'data-git-history-group': title },
@@ -767,12 +795,12 @@ window.__ModuleLoader__.load({
               'div',
               { className: 'gh-state-files' },
               list.map((file, index) => {
-                const status = file.status === undefined ? fallbackKind : file.status
+                const status = file.status === undefined ? fallback : file.status
                 const letter = STATUS_LETTERS[status] === undefined ? '?' : STATUS_LETTERS[status]
                 const path = file.oldPath === undefined ? file.path : `${file.oldPath} → ${file.path}`
                 return h(
                   'div',
-                  { key: `${index}:${file.path}`, className: 'gh-state-file', title: file.path },
+                  { key: `${index}:${file.path}`, className: `gh-state-file gh-tone-${tone}`, title: file.path },
                   h('span', { className: `gh-file-status gh-file-status-${status}`, 'aria-hidden': true }, letter),
                   h('span', { className: 'gh-file-path' }, path),
                 )
@@ -821,11 +849,20 @@ window.__ModuleLoader__.load({
         tracking.push(h('span', { key: 'behind', className: 'gh-state-track', title: t('status.behind', { count: branch.behind }) }, `↓${branch.behind}`))
       }
       const parts = []
-      if (counts.staged > 0) parts.push(`${counts.staged} ${t('status.staged')}`)
-      if (counts.unstaged > 0) parts.push(`${counts.unstaged} ${t('status.changed')}`)
-      if (counts.untracked > 0) parts.push(`${counts.untracked} ${t('status.untracked')}`)
-      if (counts.conflicts > 0) parts.push(`${counts.conflicts} ${t('status.conflicts')}`)
-      const summary = total === 0 ? t('status.clean') : parts.join(' · ')
+      if (counts.staged > 0) parts.push({ key: 'staged', tone: 'gh-tone-staged', text: `${counts.staged} ${t('status.staged')}` })
+      if (counts.unstaged > 0) parts.push({ key: 'changes', tone: 'gh-tone-changes', text: `${counts.unstaged} ${t('status.changed')}` })
+      if (counts.untracked > 0) parts.push({ key: 'untracked', tone: 'gh-tone-untracked', text: `${counts.untracked} ${t('status.untracked')}` })
+      if (counts.conflicts > 0) parts.push({ key: 'conflict', tone: 'gh-tone-conflict', text: `${counts.conflicts} ${t('status.conflicts')}` })
+      const summary = total === 0 ? t('status.clean') : parts.map((part) => part.text).join(' · ')
+      const summaryNodes = []
+      if (total === 0) {
+        summaryNodes.push(h('span', { key: 'clean' }, t('status.clean')))
+      } else {
+        parts.forEach((part, index) => {
+          if (index > 0) summaryNodes.push(h('span', { key: `sep${index}`, className: 'gh-state-sep' }, ' · '))
+          summaryNodes.push(h('span', { key: part.key, className: part.tone }, part.text))
+        })
+      }
       return h(
         'section',
         { className: 'gh-state', 'data-git-history': 'worktree', 'data-git-history-clean': total === 0 ? 'true' : undefined },
@@ -846,7 +883,7 @@ window.__ModuleLoader__.load({
           ),
           h('span', { className: 'gh-state-branch', title: branchLabel }, h(BranchGlyph), branchLabel),
           tracking.length > 0 ? h('span', { className: 'gh-state-track' }, tracking) : null,
-          h('span', { className: 'gh-state-summary', title: summary }, summary),
+          h('span', { className: 'gh-state-summary', title: summary }, summaryNodes),
         ),
         collapsed
           ? null
@@ -856,10 +893,10 @@ window.__ModuleLoader__.load({
               total === 0
                 ? h('p', { className: 'gh-state-clean' }, t('status.clean'))
                 : [
-                    h(StateGroup, { key: 'staged', title: t('status.staged'), files: data.staged, fallbackKind: 'modified' }),
-                    h(StateGroup, { key: 'changed', title: t('status.changed'), files: data.unstaged, fallbackKind: 'modified' }),
-                    h(StateGroup, { key: 'untracked', title: t('status.untracked'), files: data.untracked, fallbackKind: 'untracked' }),
-                    h(StateGroup, { key: 'conflicts', title: t('status.conflicts'), files: data.conflicts, fallbackKind: 'conflict' }),
+                    h(StateGroup, { key: 'staged', title: t('status.staged'), files: data.staged, tone: 'staged' }),
+                    h(StateGroup, { key: 'changed', title: t('status.changed'), files: data.unstaged, tone: 'changes' }),
+                    h(StateGroup, { key: 'untracked', title: t('status.untracked'), files: data.untracked, tone: 'untracked' }),
+                    h(StateGroup, { key: 'conflicts', title: t('status.conflicts'), files: data.conflicts, tone: 'conflict' }),
                   ],
               typeof data.stashes === 'number' && data.stashes > 0
                 ? h('p', { className: 'gh-state-stashes' }, t('status.stashes', { count: data.stashes }))
@@ -934,7 +971,7 @@ window.__ModuleLoader__.load({
         { className: 'gh-section-title' },
         fileSummary,
         ' · ',
-        h('span', { className: 'gh-counts' }, `+${additions} −${deletions}`),
+        h(DiffStat, { added: additions, removed: deletions }),
       )
       const sections = [
         subject.length > 0 ? h('h2', { key: 'title', className: 'gh-title' }, subject) : null,
