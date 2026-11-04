@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Git commit graph">
+  <defs>
+    <linearGradient id="gh-stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f6fd8"/>
+      <stop offset="1" stop-color="#7a4fd8"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#111726"/>
+  <path d="M22 12v40" stroke="url(#gh-stem)" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <circle cx="22" cy="18" r="6" fill="#8fb3ff" stroke="#111726" stroke-width="2"/>
+  <circle cx="22" cy="32" r="5" fill="#c9b2ff" stroke="#111726" stroke-width="2"/>
+  <circle cx="22" cy="48" r="5" fill="#8fb3ff" stroke="#111726" stroke-width="2"/>
+  <path d="M22 18h14a6 6 0 0 1 6 6v12" stroke="#c9b2ff" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="42" cy="42" r="5.5" fill="#7a4fd8" stroke="#111726" stroke-width="2"/>
+  <path d="M42 30v6" stroke="#7a4fd8" stroke-width="3" stroke-linecap="round"/>
+</svg>

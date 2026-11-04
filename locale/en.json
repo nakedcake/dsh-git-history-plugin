@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Git History Sidebar",
+    "description": "Shows the current session workspace's Git commit history in the right sidebar and opens any commit with its message, changed files, and diff."
+  }
+}

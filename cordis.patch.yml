@@ -1,0 +1,6 @@
+# Bundle layer of the Git History sidebar plugin: one Host row owning the
+# authenticated read-only Git routes, plus the browser half declared under
+# `dsh.client` in package.json.
+- insert:
+    - id: git-history-sidebar
+      name: '@local/dsh-plugin-git-history'

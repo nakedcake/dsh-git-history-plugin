@@ -1,0 +1,5 @@
+# Never commit local installs or debug artifacts.
+node_modules/
+diagnostics.log
+*.log
+.DS_Store
