@@ -4,6 +4,15 @@ A DeepSeek Harness Web plugin: the right Sidebar gains a **Git history** tab tha
 lists the current Session workspace's commits and opens any commit with its
 message, changed files, and diff.
 
+## Screenshots
+
+| Commit list with repository state | Commit view with the file panel |
+|---|---|
+| ![Commit list](docs/commit-list.png) | ![Commit view](docs/commit-view.png) |
+
+Both images are illustrative mockups with a fictional repository; the plugin
+reads the real Session workspace.
+
 ## What it adds
 
 - **A tab type** — `git-history` (`@local/dsh-plugin-git-history`), opened from
